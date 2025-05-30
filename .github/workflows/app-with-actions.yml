@@ -43,6 +43,17 @@ jobs:
       with:
         name: app
 
+    - name: Check tar on EC2
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          which tar
+          tar --version
+
+
     - name: Deploy to EC2
       uses: appleboy/scp-action@v1
       with: 
