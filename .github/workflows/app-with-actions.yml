@@ -43,28 +43,9 @@ jobs:
       with:
         name: app
 
-    - name: Set PATH on EC2
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        script: |
-          export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-    - name: Check tar on EC2
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        script: |
-          which tar
-          tar --version
-
     - name: Deploy to EC2
       uses: appleboy/scp-action@v1
-      with: 
+      with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
@@ -72,7 +53,7 @@ jobs:
         target: "/home/ubuntu/app"
         tarExec: "/usr/bin/tar"
         debug: true
-        
+    
     - name: Execute deployment script
       uses: appleboy/ssh-action@v1.2.2
       with:
@@ -80,6 +61,7 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
+          export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           mkdir -p /home/ubuntu/app/deploy
           mv /home/ubuntu/app/*.jar /home/ubuntu/app/deploy/app.jar
           sudo fuser -k -n tcp 8080 || true
