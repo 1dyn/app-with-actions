@@ -43,6 +43,12 @@ jobs:
       with:
         name: app
 
+    - name: Check for app.jar before SCP
+      run: |
+        echo "Current directory: $(pwd)"
+        ls -al
+        ls -al *.jar || echo "No jar files found in current directory"
+
     - name: Deploy to EC2
       uses: appleboy/scp-action@v1
       with: 
