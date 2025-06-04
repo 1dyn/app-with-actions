@@ -3,16 +3,19 @@ on:
   workflow_dispatch:
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: 
-  ECS_SERVICE: 
-  ECS_CLUSTER: 
-  CONTAINER_NAME: 
+  ECR_REPOSITORY: ecr-cicd
+  ECS_SERVICE: cicd-service
+  ECS_CLUSTER: first-ecs-cicd-cluster
+  CONTAINER_NAME: backend-server
   
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set short SHA
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v4
         
@@ -31,7 +34,7 @@ jobs:
         shell: bash
         
       - name: Build with Maven
-        run: mvn -B package --file pom.xml
+        run: mvn -B package --file pom.xml -DskipTests
         
       - name: Naming jar file
         run: mv ./target/*.jar ./target/app.jar
@@ -56,8 +59,8 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
-          ECR_REGISTRY: 
-          IMAGE_TAG: latest
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -66,8 +69,8 @@ jobs:
       - name: ECS task definition JSON file
         id: retrieve-task-def
         env:
-          ECR_REGISTRY: ?
-          IMAGE_TAG: latest
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
           aws ecs describe-task-definition --task-definition first-ecs-task-test-01 --query taskDefinition > task-definition.json
           cat task-definition.json
@@ -77,14 +80,14 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ?
-          container-name: ?
-          image: ?
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
     
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ?
-          service: ?
-          cluster: ?
+          task-definition: task-def.json
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
